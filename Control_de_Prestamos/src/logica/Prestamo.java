@@ -47,4 +47,50 @@ public class Prestamo {
     public void setRecordatorio(Alerta alerta) {
         this.recordatorio = alerta;
     }
+
+    // Métodos
+    
+    public void finalizarPrestamo() {
+        int cantidadDeItems = this.itemsPrestados.size();     
+        for (int i = 0; i < cantidadDeItems; i = i + 1) {            
+            Item itemActual = this.itemsPrestados.get(i);
+            itemActual.marcarComoDisponible();
+            
+        } 
+    }
+    
+    public boolean estaFinalizado() {
+        if (this.itemsPrestados.size() == 0) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    public boolean tieneAlerta() {
+        if (this.recordatorio != null) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    public void retornarItem(Item i) {
+        i.marcarComoDisponible();
+        this.itemsPrestados.remove(i);
+    }
+
+    public void agregarItem(Item i) {
+        this.itemsPrestados.add(i);
+    }
+
+    // Extra
+
+    public String toString() {
+        return "\nPrestado a: " + this.personaPrestamo.getNombreCompleto() +
+               "\nFecha de creación: " + this.fechaCreacion +
+               "\nCantidad de ítems: " + this.itemsPrestados.size() +
+               "\n¿Tiene alerta?: " + (this.tieneAlerta() ? "Sí" : "No") +
+               "\n-------------------------";
+    }
 }
