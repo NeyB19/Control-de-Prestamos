@@ -14,7 +14,7 @@ import logica.Alerta;
 
 public class Controladora {
 
-    private static Controladora instance;
+    private static Controladora instance = null;
 
     private Map<String, Persona> personasRegistradas;
     private Map<Integer, Item> itemsRegistrados;
@@ -137,74 +137,130 @@ public class Controladora {
     
     // CRUD PERSONAS
     
-    public void registrarPersona(Persona p) {
-        if (p != null) {
-            this.personasRegistradas.put(p.getNombreCompleto().toLowerCase(), p);
+    public List<Persona> obtenerListadoPersonas() {
+        ArrayList<Persona> lista = new ArrayList<>(this.personasRegistradas.values());
+        return lista;
+    }
+  
+    public boolean validarEmail(String email) {
+        if (email != null) {
+            if (email.contains("@")) {
+                if (email.contains(".")) {
+                    return true;
+                }
+            }
         }
+        return false;
+    }
+    
+    public void registrarPersona(String nombre, String telefono, String correo) throws Exception {
+        if (nombre == null || nombre.trim().isEmpty() == true) {
+            throw new Exception("Error: El nombre completo es obligatorio.");
+        }
+        if (this.validarEmail(correo) == false) {
+            throw new Exception("Error: El formato del correo electrónico no es válido.");
+        }
+        
+        String nombreP = nombre.toLowerCase();
+        if (this.personasRegistradas.containsKey(nombreP) == true) {
+            throw new Exception("Error: Ya existe una persona registrada con ese nombre.");
+        }
+        
+        Persona nueva = new Persona(nombre, telefono, correo);
+        this.personasRegistradas.put(nombreP, nueva);
     }
 
-    public void modificarPersona(Persona p) {
-        Persona encontrada = this.consultarPersona(p.getNombreCompleto());
-        if (encontrada != null) {
-            encontrada.setTelefono(p.getTelefono());
-            encontrada.setCorreoElectronico(p.getCorreoElectronico());
-        }
+    public void modificarPersona(String nombre, String telefono, String correo) throws Exception {
+        Persona encontrada = consultarPersona(nombre);        
+        if (this.validarEmail(correo) == false) {
+            throw new Exception("Error: El formato del correo electrónico no es válido.");
+        }  
+        encontrada.setTelefono(telefono);
+        encontrada.setCorreoElectronico(correo);
     }
 
-    public void borrarPersona(String nombre) {
+    public void borrarPersona(String nombre) throws Exception {
+        Persona personaAEliminar = consultarPersona(nombre);
+        if (personaAEliminar.getPrestamosRecibidos().isEmpty() == false) {
+            throw new Exception("Error: No se puede eliminar a la persona porque tiene préstamos activos.");
+        }
         this.personasRegistradas.remove(nombre.toLowerCase());
     }
-
-    public Persona consultarPersona(String nombre) {
-        return this.personasRegistradas.get(nombre.toLowerCase());
+    
+    public Persona consultarPersona(String nombre) throws Exception {
+        Persona encontrada = this.personasRegistradas.get(nombre.toLowerCase());
+        if (encontrada == null) {
+            throw new Exception("Error: La persona con ese nombre no existe en el sistema.");
+        }
+        return encontrada;
     }
     
     // CRUD ÍTEMS 
 
-    public void registrarItem(Item i) {
-        if (i != null) {
-            this.itemsRegistrados.put(i.getCodigo(), i);
-            i.getTipoFisico().getItemsAsociados().add(i);
-            int totalCategorias = i.getCategorias().size();
-            for (int j = 0; j < totalCategorias; j = j + 1) {
-                i.getCategorias().get(j).getItemsAsociados().add(i);
-            }
+    public List<Item> obtenerListadoItems() {
+        ArrayList<Item> lista = new ArrayList<>(this.itemsRegistrados.values());
+        return lista;
+    }
+    
+    public void registrarItem(String nombre, String descripcion, Tipo tipoFisico, List<Categoria> categorias) throws Exception {
+        if (nombre == null || nombre.trim().isEmpty() == true) {
+            throw new Exception("Error: El nombre del item es obligatorio.");
         }
+        if (tipoFisico == null) {
+            throw new Exception("Error: El item debe tener un tipo fisico asignado.");
+        }
+        Item nuevo = new Item(nombre, descripcion, tipoFisico);        
+        if (categorias != null) {
+            int totalCategorias = categorias.size();
+            for (int j = 0; j < totalCategorias; j = j + 1) {
+                nuevo.agregarCategoria(categorias.get(j));
+            }
+        }        
+        this.itemsRegistrados.put(nuevo.getCodigo(), nuevo);        
+        nuevo.vincularConTipoFisico();
+        nuevo.vincularConCategorias();
     }
 
-    public void modificarItem(Item i) {
-        Item encontrado = this.consultarItem(i.getCodigo());
+    public void modificarItem(int codigo, String nombre, String descripcion, Tipo tipoNuevo, List<Categoria> categoriasNuevas) throws Exception {
+        Item encontrado = consultarItem(codigo);
+        if (nombre == null || nombre.trim().isEmpty() == true) {
+            throw new Exception("Error: El nombre no puede estar vacío.");
+        }
+        if (tipoNuevo == null) {
+            throw new Exception("Error: El item no puede quedarse sin tipo físico.");
+        }        
+        encontrado.desvincularDeTipo();
+        encontrado.desvincularDeCategorias();            
         
-        if (encontrado != null) {
-            encontrado.desvincularDeTipo();
-            encontrado.desvincularDeCategorias();            
-            encontrado.setNombre(i.getNombre());
-            encontrado.setDescripcion(i.getDescripcion());
-            encontrado.setTipoFisico(i.getTipoFisico());            
-            encontrado.getCategorias().clear();
-            int totalNuevas = i.getCategorias().size();
+        encontrado.setNombre(nombre);
+        encontrado.setDescripcion(descripcion);
+        encontrado.setTipoFisico(tipoNuevo);            
+        encontrado.getCategorias().clear();
+        if (categoriasNuevas != null) { 
+            int totalNuevas = categoriasNuevas.size();
             for (int k = 0; k < totalNuevas; k = k + 1) {
-                encontrado.agregarCategoria(i.getCategorias().get(k));
+                encontrado.agregarCategoria(categoriasNuevas.get(k));
             }
-            encontrado.vincularConTipoFisico();
-            encontrado.vincularConCategorias();
         }
+        encontrado.vincularConTipoFisico();
+        encontrado.vincularConCategorias();
     }
 
-    public void borrarItem(int codigo) {
-        Item i = this.consultarItem(codigo);
-        if (i != null) {
-            i.getTipoFisico().getItemsAsociados().remove(i);
-            
-            int totalCategorias = i.getCategorias().size();
-            for (int j = 0; j < totalCategorias; j = j + 1) {
-                i.getCategorias().get(j).getItemsAsociados().remove(i);
-            }            
-            this.itemsRegistrados.remove(codigo);
-        }
+    public void borrarItem(int codigo) throws Exception {
+        Item encontrado = consultarItem(codigo);
+        if (encontrado.isEstaPrestado() == true) {
+            throw new Exception("Error: No se puede eliminar el item porque se encuentra prestado actualmente.");
+        }        
+        encontrado.desvincularDeTipo();
+        encontrado.desvincularDeCategorias();            
+        this.itemsRegistrados.remove(codigo);
     }
-
-    public Item consultarItem(int codigo) {
-        return this.itemsRegistrados.get(codigo);
+    
+    public Item consultarItem(int codigo) throws Exception {
+        Item encontrado = this.itemsRegistrados.get(codigo);
+        if (encontrado == null) {
+            throw new Exception("Error: El item con ese código no existe en el sistema.");
+        }
+        return encontrado;
     }
 }
