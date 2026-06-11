@@ -263,4 +263,54 @@ public class Controladora {
         }
         return encontrado;
     }
+    
+    // CRUD CATEGORÍAS
+
+    public List<Categoria> obtenerListadoCategorias() {
+        ArrayList<Categoria> lista = new ArrayList<>(this.categoriasRegistradas.values());
+        return lista;
+    }
+
+    public void registrarCategoria(String nombre) throws Exception {
+        if (nombre == null || nombre.trim().isEmpty() == true) {
+            throw new Exception("Error: El nombre de la categoría no puede estar vacío");
+        }
+        
+        String nombreC = nombre.toLowerCase();
+        if (this.categoriasRegistradas.containsKey(nombreC) == true) {
+            throw new Exception("Error: Ya existe una categoría registrada con ese nombre");
+        }
+        
+        Categoria nueva = new Categoria(nombre);
+        this.categoriasRegistradas.put(nombreC, nueva);
+    }
+
+    public void modificarCategoria(String nombreViejo, String nombreNuevo) throws Exception {
+        Categoria encontrada = consultarCategoria(nombreViejo);
+        if (nombreNuevo == null || nombreNuevo.trim().isEmpty() == true) {
+            throw new Exception("Error: El nuevo nombre para la categoría no debe ser vacío");
+        }
+        String nombreC = nombreNuevo.toLowerCase();
+        
+        if (nombreViejo.equalsIgnoreCase(nombreNuevo) == false && this.categoriasRegistradas.containsKey(nombreC) == true) {
+            throw new Exception("Error: Ya existe esa categoría");
+        }
+        this.categoriasRegistradas.remove(nombreViejo.toLowerCase());        
+        encontrada.setNombre(nombreNuevo);        
+        this.categoriasRegistradas.put(nombreC, encontrada);
+    }
+
+    public void borrarCategoria(String nombre) throws Exception {
+        Categoria encontrada = consultarCategoria(nombre);        
+        encontrada.quitarCategoriaDeItems();        
+        this.categoriasRegistradas.remove(nombre.toLowerCase());
+    }
+    
+    public Categoria consultarCategoria(String nombre) throws Exception {
+        Categoria encontrada = this.categoriasRegistradas.get(nombre.toLowerCase());
+        if (encontrada == null) {
+            throw new Exception("Error: La categoría '" + nombre + "' no existe en el sistema.");
+        }
+        return encontrada;
+    }
 }
