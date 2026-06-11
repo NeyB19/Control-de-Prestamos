@@ -371,11 +371,48 @@ public class Controladora {
         }
         return encontrado;
     }
+    
+    // MÉTODOS DE REPORTES
 
+    public List<Persona> generarReporteUsuario() {
+        ArrayList<Persona> listaUsuarios = new ArrayList<>(this.personasRegistradas.values());
+        return listaUsuarios;
+    }
+
+    public List<Item> generarReporteItem() {
+        ArrayList<Item> listaOrdenada = new ArrayList<>(this.itemsRegistrados.values());
+        this.ordenarItemsPorNombre(listaOrdenada);
+        return listaOrdenada;
+    }
+
+    public List<Categoria> generarReporteCategoria() {
+        ArrayList<Categoria> listaCategorias = new ArrayList<>(this.categoriasRegistradas.values());
+        return listaCategorias;
+    }
+
+    public List<Tipo> generarReporteTipo() {
+        ArrayList<Tipo> listaTipos = new ArrayList<>(this.tiposRegistrados.values());
+        return listaTipos;
+    }
 
     // EXTRAS
 
     public Tipo getTipoGenerico() {
         return this.tiposRegistrados.get("generico");
+    }
+    
+    private void ordenarItemsPorNombre(List<Item> lista) {
+        int total = lista.size();
+        for (int i = 0; i < total; i = i + 1) {
+            for (int j = i + 1; j < total; j = j + 1) {
+                Item itemA = lista.get(i);
+                Item itemB = lista.get(j);                
+                if (itemA.getNombre().compareToIgnoreCase(itemB.getNombre()) > 0) {
+                    Item temporal = lista.get(i);
+                    lista.set(i, lista.get(j));
+                    lista.set(j, temporal);
+                }
+            }
+        }
     }
 }
