@@ -28,6 +28,8 @@ public class Controladora {
         this.categoriasRegistradas = new TreeMap<String, Categoria>();
         this.tiposRegistrados = new TreeMap<String, Tipo>();
         this.prestamosRegistrados = new ArrayList<Prestamo>();
+        Tipo base = new Tipo("Genérico");
+        this.tiposRegistrados.put("generico", base);
     }
 
     public static Controladora getInstance() {
@@ -292,8 +294,10 @@ public class Controladora {
         }
         String nombreC = nombreNuevo.toLowerCase();
         
-        if (nombreViejo.equalsIgnoreCase(nombreNuevo) == false && this.categoriasRegistradas.containsKey(nombreC) == true) {
-            throw new Exception("Error: Ya existe esa categoría");
+        if (!nombreViejo.equalsIgnoreCase(nombreNuevo)) {
+            if (this.categoriasRegistradas.containsKey(nombreC)) {
+                throw new Exception("Error: Ya existe esa categoría");
+            }
         }
         this.categoriasRegistradas.remove(nombreViejo.toLowerCase());        
         encontrada.setNombre(nombreNuevo);        
@@ -309,8 +313,69 @@ public class Controladora {
     public Categoria consultarCategoria(String nombre) throws Exception {
         Categoria encontrada = this.categoriasRegistradas.get(nombre.toLowerCase());
         if (encontrada == null) {
-            throw new Exception("Error: La categoría '" + nombre + "' no existe en el sistema.");
+            throw new Exception("Error: Esa categoría no existe en el sistema");
         }
         return encontrada;
+    }
+    
+    // CRUD TIPOS
+
+    public List<Tipo> obtenerListadoTipos() {
+        ArrayList<Tipo> lista = new ArrayList<>(this.tiposRegistrados.values());
+        return lista;
+    }
+
+    public void registrarTipo(String nombre) throws Exception {
+        if (nombre == null || nombre.trim().isEmpty() == true) {
+            throw new Exception("Error: El nombre del tipo físico no puede estar vacío.");
+        }
+        String nombreT = nombre.toLowerCase();
+        if (this.tiposRegistrados.containsKey(nombreT) == true) {
+            throw new Exception("Error: Ya existe ese tipo físico");
+        }
+        Tipo nuevo = new Tipo(nombre);
+        this.tiposRegistrados.put(nombreT, nuevo);
+    }
+
+    public void modificarTipo(String nombreViejo, String nombreNuevo) throws Exception {
+        Tipo encontrado = consultarTipo(nombreViejo);
+        if (nombreNuevo == null || nombreNuevo.trim().isEmpty() == true) {
+            throw new Exception("Error: El nuevo nombre para el tipo físico no es válido.");
+        }        
+        String nombreT = nombreNuevo.toLowerCase(); 
+        
+        if (!nombreViejo.equalsIgnoreCase(nombreNuevo)) {            
+            if (this.tiposRegistrados.containsKey(nombreT)) {
+                throw new Exception("Error: Ya existe ese tipo físico");
+            }
+        }        
+        this.tiposRegistrados.remove(nombreViejo.toLowerCase());        
+        encontrado.setNombre(nombreNuevo);        
+        this.tiposRegistrados.put(nombreT, encontrado);
+    }
+
+    public void borrarTipo(String nombre) throws Exception {
+        Tipo encontrado = consultarTipo(nombre);        
+        Tipo tipoRespaldo = this.getTipoGenerico();        
+        if (encontrado.equals(tipoRespaldo)) {
+            throw new Exception("Error: El tipo 'Genérico' no se puede eliminar.");
+        }       
+        encontrado.reasignarItems(tipoRespaldo);        
+        this.tiposRegistrados.remove(nombre.toLowerCase());
+    }
+    
+    public Tipo consultarTipo(String nombre) throws Exception {
+        Tipo encontrado = this.tiposRegistrados.get(nombre.toLowerCase());
+        if (encontrado == null) {
+            throw new Exception("Error: Ese tipo físico no existe en el sistema.");
+        }
+        return encontrado;
+    }
+
+
+    // EXTRAS
+
+    public Tipo getTipoGenerico() {
+        return this.tiposRegistrados.get("generico");
     }
 }
