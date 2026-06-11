@@ -1,10 +1,10 @@
 package control;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 import logica.Categoria;
 import logica.Item;
 import logica.Persona;
@@ -84,5 +84,54 @@ public class Controladora {
 
     public void eliminarItemDePrestamo(Prestamo p, Item i) {
         this.retornarItemDePrestamo(p, i);
+    }
+    
+    // MÉTODOS DE ALERTAS 
+    
+    public List<Alerta> verificarAlertasAlEntrar() {
+        List<Alerta> pendientesDisparadas = new ArrayList<Alerta>();
+        LocalDateTime ahora = LocalDateTime.now();
+        
+        int totalPrestamos = this.prestamosRegistrados.size();
+        for (int i = 0; i < totalPrestamos; i = i + 1) {
+            Prestamo prestamoActual = this.prestamosRegistrados.get(i);
+            
+            if (prestamoActual.tieneAlerta() == true) {
+                Alerta alertaActual = prestamoActual.getRecordatorio();
+                
+                if (alertaActual.evaluarYProcesarAlerta(ahora) == true) {
+                    pendientesDisparadas.add(alertaActual);
+                }
+            }
+        }        
+        return pendientesDisparadas;
+    }
+    
+    public void agregarAlertaAPrestamo(Prestamo p, Alerta a) {
+        if (p != null) {
+            p.setRecordatorio(a);
+        }
+    }
+    
+    // MÉTODOS DE CONSULTAS
+
+    public List<Prestamo> consultarPrestamosPorUsuario(Persona p) {
+        return p.getPrestamosRecibidos(); 
+    }
+
+    public List<Prestamo> consultarPrestamosPorItem(Item itemBuscado) {
+        List<Prestamo> resultado = new ArrayList<Prestamo>();
+        if (itemBuscado.isEstaPrestado() == true && itemBuscado.getRegistroPrestamo() != null) {
+            resultado.add(itemBuscado.getRegistroPrestamo()); 
+        }
+        return resultado;
+    }
+
+    public List<Item> consultarItemsPorCategoria(Categoria c) {
+        return c.getItemsAsociados(); 
+    }
+
+    public List<Item> consultarItemsPorTipo(Tipo t) {
+        return t.getItemsAsociados(); 
     }
 }
