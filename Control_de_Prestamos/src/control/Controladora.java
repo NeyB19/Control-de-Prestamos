@@ -134,4 +134,28 @@ public class Controladora {
     public List<Item> consultarItemsPorTipo(Tipo t) {
         return t.getItemsAsociados(); 
     }
+    
+    // CRUD PERSONAS
+    
+    public void registrarPersona(Persona p) {
+        if (p != null) {
+            this.personasRegistradas.put(p.getNombreCompleto().toLowerCase(), p);
+        }
+    }
+
+    public void modificarPersona(Persona p) {
+        Persona encontrada = this.consultarPersona(p.getNombreCompleto());
+        if (encontrada != null) {
+            encontrada.setTelefono(p.getTelefono());
+            encontrada.setCorreoElectronico(p.getCorreoElectronico());
+        }
+    }
+
+    public void borrarPersona(String nombre) {
+        this.personasRegistradas.remove(nombre.toLowerCase());
+    }
+
+    public Persona consultarPersona(String nombre) {
+        return this.personasRegistradas.get(nombre.toLowerCase());
+    }
 }
