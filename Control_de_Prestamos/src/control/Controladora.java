@@ -158,4 +158,53 @@ public class Controladora {
     public Persona consultarPersona(String nombre) {
         return this.personasRegistradas.get(nombre.toLowerCase());
     }
+    
+    // CRUD ÍTEMS 
+
+    public void registrarItem(Item i) {
+        if (i != null) {
+            this.itemsRegistrados.put(i.getCodigo(), i);
+            i.getTipoFisico().getItemsAsociados().add(i);
+            int totalCategorias = i.getCategorias().size();
+            for (int j = 0; j < totalCategorias; j = j + 1) {
+                i.getCategorias().get(j).getItemsAsociados().add(i);
+            }
+        }
+    }
+
+    public void modificarItem(Item i) {
+        Item encontrado = this.consultarItem(i.getCodigo());
+        
+        if (encontrado != null) {
+            encontrado.desvincularDeTipo();
+            encontrado.desvincularDeCategorias();            
+            encontrado.setNombre(i.getNombre());
+            encontrado.setDescripcion(i.getDescripcion());
+            encontrado.setTipoFisico(i.getTipoFisico());            
+            encontrado.getCategorias().clear();
+            int totalNuevas = i.getCategorias().size();
+            for (int k = 0; k < totalNuevas; k = k + 1) {
+                encontrado.agregarCategoria(i.getCategorias().get(k));
+            }
+            encontrado.vincularConTipoFisico();
+            encontrado.vincularConCategorias();
+        }
+    }
+
+    public void borrarItem(int codigo) {
+        Item i = this.consultarItem(codigo);
+        if (i != null) {
+            i.getTipoFisico().getItemsAsociados().remove(i);
+            
+            int totalCategorias = i.getCategorias().size();
+            for (int j = 0; j < totalCategorias; j = j + 1) {
+                i.getCategorias().get(j).getItemsAsociados().remove(i);
+            }            
+            this.itemsRegistrados.remove(codigo);
+        }
+    }
+
+    public Item consultarItem(int codigo) {
+        return this.itemsRegistrados.get(codigo);
+    }
 }
