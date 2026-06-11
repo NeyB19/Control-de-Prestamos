@@ -1,17 +1,23 @@
 package logica;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Persona {
     
     // Atributos
     private String nombreCompleto;
     private String telefono;
     private String correoElectronico;
+    
+    private List<Prestamo> prestamosRecibidos;
 
     // Constructor
     public Persona(String nombreCompleto, String telefono, String correoElectronico) {
         this.nombreCompleto = nombreCompleto;
         this.telefono = telefono;
         this.correoElectronico = correoElectronico;
+        this.prestamosRecibidos = new ArrayList<Prestamo>();
     }
 
     //Getters y Setters
@@ -40,9 +46,13 @@ public class Persona {
         this.correoElectronico = correoElectronico;
     }
 
+    public List<Prestamo> getPrestamosRecibidos() {
+		return prestamosRecibidos;
+	}
+    
     // Extras
 
-    public String toString() {
+	public String toString() {
         return "\nNombre: " + this.nombreCompleto +
                "\nTeléfono: " + this.telefono +
                "\nCorreo: " + this.correoElectronico +
