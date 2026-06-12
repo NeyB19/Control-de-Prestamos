@@ -12,7 +12,8 @@ import logica.Prestamo;
 import logica.Tipo;
 import logica.Alerta;
 
-public class Controladora {
+public class Controladora implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
 
     private static Controladora instance = null;
 
@@ -205,7 +206,11 @@ public class Controladora {
     }
     
     public void registrarItem(String nombre, String descripcion, Tipo tipoFisico, List<Categoria> categorias) throws Exception {
-        if (nombre == null || nombre.trim().isEmpty() == true) {
+    	if (this.tiposRegistrados.size() <= 1) {
+            throw new Exception("Debe registrar al menos un Tipo en el sistema antes de crear un item");
+        }
+    	
+    	if (nombre == null || nombre.trim().isEmpty() == true) {
             throw new Exception("Error: El nombre del item es obligatorio.");
         }
         if (tipoFisico == null) {
@@ -413,6 +418,37 @@ public class Controladora {
                     lista.set(j, temporal);
                 }
             }
+        }
+    }
+    
+    // PERSISTENCIA DE DATOS
+
+    public void guardarDatos() {
+        try {
+            java.io.FileOutputStream file = new java.io.FileOutputStream("DatosPrestamos.dat");
+            java.io.ObjectOutputStream stream = new java.io.ObjectOutputStream(file);
+            stream.writeObject(instance);             
+            stream.close();
+            file.close();
+            System.out.println("Datos del sistema guardados con éxito");
+            
+        } catch (java.io.IOException e) {
+            System.out.println("Error al guardar los datos: " + e.getMessage());
+        }
+    }
+
+    public void cargarDatos() {
+        try {
+            java.io.FileInputStream file = new java.io.FileInputStream("DatosPrestamos.dat");
+            java.io.ObjectInputStream stream = new java.io.ObjectInputStream(file);            
+            instance = (Controladora) stream.readObject();             
+            stream.close();
+            file.close();
+            System.out.println("Datos del sistema cargados con éxito");           
+        } catch (java.io.FileNotFoundException e) {
+            System.out.println("Archivo de datos no encontrado");
+        } catch (Exception e) {
+            System.out.println("Error al cargar los datos: " + e.getMessage());
         }
     }
 }
