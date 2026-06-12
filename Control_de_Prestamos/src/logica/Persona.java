@@ -3,7 +3,8 @@ package logica;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Persona {
+public class Persona implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     
     // Atributos
     private String nombreCompleto;
@@ -49,6 +50,20 @@ public class Persona {
     public List<Prestamo> getPrestamosRecibidos() {
 		return prestamosRecibidos;
 	}
+    
+    // Métodos
+    
+    public void asociarPrestamo(Prestamo p) {
+        if (p != null) {
+            this.prestamosRecibidos.add(p);
+        }
+    }
+    
+    public void desasociarPrestamo(Prestamo p) {
+        if (p != null) {
+            this.prestamosRecibidos.remove(p);
+        }
+    }
     
     // Extras
 

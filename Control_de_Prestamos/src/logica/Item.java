@@ -3,7 +3,8 @@ package logica;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Item {
+public class Item implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
  
 	// Atributos
 	private int codigo;
@@ -81,6 +82,7 @@ public class Item {
 	
 	 public void marcarComoDisponible() {
 	     this.estaPrestado = false;
+	     this.registroPrestamo = null;
 	 }
 	
 	  public void agregarCategoria(Categoria categoria) {
@@ -90,7 +92,40 @@ public class Item {
 	 public void eliminarDeCategoria(Categoria categoria) {
 	     this.categorias.remove(categoria);
 	 }
-	
+
+	 public void vincularConTipoFisico() {
+	     	if (this.tipoFisico != null) {
+	     		this.tipoFisico.getItemsAsociados().add(this);
+	     	}
+	 }
+	 
+	 public void desvincularDeTipo() {
+	        if (this.tipoFisico != null) {
+	            this.tipoFisico.getItemsAsociados().remove(this);
+	        }
+	 }
+
+	 public void vincularConCategorias() {
+		 	int totalCategorias = this.categorias.size();	        
+		 		for (int i = 0; i < totalCategorias; i = i + 1) {
+		 			Categoria categoriaActual = this.categorias.get(i);
+		 			categoriaActual.getItemsAsociados().add(this);
+	        }
+	 }
+	 
+	 public void desvincularDeCategorias() {
+	        int total = this.categorias.size();	        
+	        for (int i = 0; i < total; i = i + 1) {
+	            Categoria categoriaActual = this.categorias.get(i);	            
+	            categoriaActual.getItemsAsociados().remove(this);
+	        }
+	    }
+	 
+	 public void vincularAPrestamo(Prestamo p) {
+	        this.estaPrestado = true;
+	        this.registroPrestamo = p;
+	    }
+	 
 	// Extra
 	 
 	 public String toString() {

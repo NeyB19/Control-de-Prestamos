@@ -2,7 +2,8 @@ package logica;
 
 import java.time.LocalDateTime;
 
-public class Alerta {
+public class Alerta implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
 
     // Atributos
     private String tipoAlerta;             
@@ -73,6 +74,34 @@ public class Alerta {
             this.tiempoActivacion = nuevaFechaFutura;
             this.enviada = false;
         }
+    }
+    
+    public boolean debeDispararse() {
+        if (this.enviada == true) {
+            return false;
+        }
+        LocalDateTime ahora = LocalDateTime.now();        
+        if (ahora.isAfter(this.tiempoActivacion) == true) {
+            return true;
+        }        
+        return false;
+    }
+    
+    public boolean evaluarYProcesarAlerta(LocalDateTime ahora) {
+        if (this.enviada == true) {
+            return false;
+        }        
+        if (ahora.isAfter(this.tiempoActivacion) == true || ahora.isEqual(this.tiempoActivacion) == true) {            
+            if (this.tipoAlerta.equals("Única") == true) {
+                this.enviada = true;
+            }            
+            if (this.tipoAlerta.equals("Recurrente") == true) {
+                this.programarSiguienteRepeticion();
+            }
+            return true; // Se disparó con éxito
+        }
+        
+        return false; // Aún no es hora
     }
 
     // Extra

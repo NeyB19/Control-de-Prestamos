@@ -3,7 +3,8 @@ package logica;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public class Prestamo {
+public class Prestamo implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
 
     // Atributos
     private LocalDateTime fechaCreacion;
@@ -52,10 +53,12 @@ public class Prestamo {
     public void finalizarPrestamo() {
         int cantidadDeItems = this.itemsPrestados.size();     
         for (int i = 0; i < cantidadDeItems; i = i + 1) {            
-            Item itemActual = this.itemsPrestados.get(i);
-            itemActual.marcarComoDisponible();
-            
-        } 
+            Item itemActual = this.itemsPrestados.get(i);            
+            itemActual.marcarComoDisponible(); 
+        }         
+        if (this.tieneAlerta() == true) {
+            this.recordatorio = null;
+        }
     }
     
     public boolean estaFinalizado() {

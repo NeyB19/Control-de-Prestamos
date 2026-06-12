@@ -3,7 +3,8 @@ package logica;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Categoria {
+public class Categoria implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     
     // Atributos
     private String nombre;
@@ -15,7 +16,7 @@ public class Categoria {
         this.itemsAsociados = new ArrayList<Item>();
     }
 
-    //Getters y Setters
+    // Getters y Setters
     
     public String getNombre() {
         return this.nombre;
@@ -28,6 +29,15 @@ public class Categoria {
     public List<Item> getItemsAsociados() {
 		return itemsAsociados;
 	}
+    
+    // Métodos
+    
+    public void quitarCategoriaDeItems() {
+        int total = this.itemsAsociados.size();
+        for (int i = 0; i < total; i = i + 1) {
+            this.itemsAsociados.get(i).getCategorias().remove(this);
+        }
+    }
 
     // Extras
 
