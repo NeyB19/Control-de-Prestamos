@@ -43,50 +43,92 @@ public class Controladora implements java.io.Serializable {
 
     // MÉTODOS DE PRÉSTAMOS
 
-    public void registrarPrestamo(Persona personaPrestamo, List<Item> items, Alerta alerta) {
-        Prestamo nuevoPrestamo = new Prestamo(personaPrestamo, items, alerta);
-        this.prestamosRegistrados.add(nuevoPrestamo);        
-        personaPrestamo.getPrestamosRecibidos().add(nuevoPrestamo);        
-        int cantidadItems = items.size();
-        for (int i = 0; i < cantidadItems; i = i + 1) {
-            Item itemActual = items.get(i);
-            itemActual.marcarComoPrestado();
-            itemActual.setRegistroPrestamo(nuevoPrestamo); 
+    public void registrarPrestamo(String nombrePersona, List<Integer> codigosItems, String tipoAlerta, int minutosAlerta, String mensajeAlerta) throws Exception {
+        Persona persona = this.personasRegistradas.get(nombrePersona.trim());
+        if (persona == null) {
+            throw new Exception("Error: Esa persona no existe");
         }
-    }
 
-    public void finalizarPrestamo(Prestamo prestamo) {
-        if (prestamo != null) {            
-            prestamo.finalizarPrestamo();            
-            Persona p = prestamo.getPersonaPrestamo();
-            p.getPrestamosRecibidos().remove(prestamo);            
-            this.prestamosRegistrados.remove(prestamo);
-        }
-    }
-
-    public void retornarItemDePrestamo(Prestamo p, Item i) {
-        if (p != null) {
-            if (i != null) {                
-                p.retornarItem(i);                
-                if (p.estaFinalizado() == true) {
-                    this.finalizarPrestamo(p);
+        List<Item> itemsReales = new ArrayList<>();
+        for (int i = 0; i < codigosItems.size(); i++) {
+            Item item = this.itemsRegistrados.get(codigosItems.get(i));
+            if (item != null) {
+                if (item.isEstaPrestado()) {
+                    throw new Exception("Error: El ítem ya está prestado");
                 }
+                itemsReales.add(item);
             }
+        }
+
+        if (itemsReales.isEmpty()) {
+            throw new Exception("Error: Debe asociar al menos un ítem al préstamo.");
+        }
+
+        Alerta alerta = null;
+        if (tipoAlerta != null && !tipoAlerta.trim().isEmpty()) {
+            alerta = new Alerta(tipoAlerta, LocalDateTime.now().plusMinutes(minutosAlerta), mensajeAlerta, minutosAlerta);
+        }
+
+        Prestamo nuevoPrestamo = new Prestamo(persona, itemsReales, alerta);
+        this.prestamosRegistrados.add(nuevoPrestamo);        
+        persona.asociarPrestamo(nuevoPrestamo);       
+
+        for (int i = 0; i < itemsReales.size(); i++) {
+            Item itemActual = itemsReales.get(i);
+            itemActual.vincularAPrestamo(nuevoPrestamo);
         }
     }
 
-    public void agregarItemAPrestamo(Prestamo p, Item i) {
-        if (p != null) {
-            if (i != null) {                
-                p.agregarItem(i);                
-                i.marcarComoPrestado();
-                i.setRegistroPrestamo(p);
+    public void finalizarPrestamo(int indicePrestamo) throws Exception {
+        if (indicePrestamo < 0 || indicePrestamo >= this.prestamosRegistrados.size()) {
+            throw new Exception("Error: El préstamo seleccionado no es válido");
+        }
+        
+        Prestamo prestamo = this.prestamosRegistrados.get(indicePrestamo);
+        prestamo.finalizarPrestamo();            
+        Persona p = prestamo.getPersonaPrestamo();
+        p.desasociarPrestamo(prestamo);            
+        this.prestamosRegistrados.remove(indicePrestamo);
+    }
+
+    public void retornarItemDePrestamo(int indicePrestamo, int codigoItem) throws Exception {
+        if (indicePrestamo < 0 || indicePrestamo >= this.prestamosRegistrados.size()) {
+            throw new Exception("Error: El préstamo seleccionado no es válido");
+        }
+        
+        Prestamo p = this.prestamosRegistrados.get(indicePrestamo);
+        Item i = this.itemsRegistrados.get(codigoItem);
+        if (i == null) {
+            throw new Exception("Error: El ítem no existe");
+        }
+        
+        if (p.getItemsPrestados().contains(i)) {                
+            p.retornarItem(i);                
+            if (p.estaFinalizado()) {
+                this.finalizarPrestamo(indicePrestamo);
             }
+        } else {
+            throw new Exception("Error: El ítem no pertenece a este préstamo");
         }
     }
 
-    public void eliminarItemDePrestamo(Prestamo p, Item i) {
-        this.retornarItemDePrestamo(p, i);
+    public void agregarItemAPrestamo(int indicePrestamo, int codigoItem) throws Exception {
+        if (indicePrestamo < 0 || indicePrestamo >= this.prestamosRegistrados.size()) {
+            throw new Exception("Error: El préstamo seleccionado no es válido");
+        }
+        
+        Prestamo p = this.prestamosRegistrados.get(indicePrestamo);
+        Item i = this.itemsRegistrados.get(codigoItem);
+        if (i == null || i.isEstaPrestado()) {
+            throw new Exception("Error: El ítem no está disponible");
+        }
+        
+        p.agregarItem(i);                
+        i.vincularAPrestamo(p);
+    }
+
+    public void eliminarItemDePrestamo(int indicePrestamo, int codigoItem) throws Exception {
+        this.retornarItemDePrestamo(indicePrestamo, codigoItem);
     }
     
     // MÉTODOS DE ALERTAS 
@@ -110,31 +152,38 @@ public class Controladora implements java.io.Serializable {
         return pendientesDisparadas;
     }
     
-    public void agregarAlertaAPrestamo(Prestamo p, Alerta a) {
-        if (p != null) {
-            p.setRecordatorio(a);
+    
+    public void agregarAlertaAPrestamo(int indicePrestamo, String tipoAlerta, int minutosAlerta, String mensajeAlerta) throws Exception {
+        if (indicePrestamo < 0 || indicePrestamo >= this.prestamosRegistrados.size()) {
+            throw new Exception("Error: Préstamo no válido");
         }
+        Alerta nuevaAlerta = new Alerta(tipoAlerta, LocalDateTime.now().plusMinutes(minutosAlerta), mensajeAlerta, minutosAlerta);
+        this.prestamosRegistrados.get(indicePrestamo).setRecordatorio(nuevaAlerta);
     }
     
     // MÉTODOS DE CONSULTAS
 
-    public List<Prestamo> consultarPrestamosPorUsuario(Persona p) {
+    public List<Prestamo> consultarPrestamosPorUsuario(String nombrePersona) throws Exception {
+        Persona p = consultarPersona(nombrePersona);
         return p.getPrestamosRecibidos(); 
     }
 
-    public List<Prestamo> consultarPrestamosPorItem(Item itemBuscado) {
+    public List<Prestamo> consultarPrestamosPorItem(int codigoItem) throws Exception {
+        Item itemBuscado = consultarItem(codigoItem);
         List<Prestamo> resultado = new ArrayList<Prestamo>();
-        if (itemBuscado.isEstaPrestado() == true && itemBuscado.getRegistroPrestamo() != null) {
+        if (itemBuscado.isEstaPrestado() && itemBuscado.getRegistroPrestamo() != null) {
             resultado.add(itemBuscado.getRegistroPrestamo()); 
         }
         return resultado;
     }
 
-    public List<Item> consultarItemsPorCategoria(Categoria c) {
+    public List<Item> consultarItemsPorCategoria(String nombreCategoria) throws Exception {
+        Categoria c = consultarCategoria(nombreCategoria);
         return c.getItemsAsociados(); 
     }
 
-    public List<Item> consultarItemsPorTipo(Tipo t) {
+    public List<Item> consultarItemsPorTipo(String nombreTipo) throws Exception {
+        Tipo t = consultarTipo(nombreTipo);
         return t.getItemsAsociados(); 
     }
     
@@ -204,23 +253,25 @@ public class Controladora implements java.io.Serializable {
         ArrayList<Item> lista = new ArrayList<>(this.itemsRegistrados.values());
         return lista;
     }
-    
-    public void registrarItem(String nombre, String descripcion, Tipo tipoFisico, List<Categoria> categorias) throws Exception {
-    	if (this.tiposRegistrados.size() <= 1) {
+
+    public void registrarItem(String nombre, String descripcion, String nombreTipo, List<String> nombresCategorias) throws Exception {
+        if (this.tiposRegistrados.size() <= 1) {
             throw new Exception("Debe registrar al menos un Tipo en el sistema antes de crear un item");
         }
-    	
-    	if (nombre == null || nombre.trim().isEmpty() == true) {
+        if (nombre == null || nombre.trim().isEmpty()) {
             throw new Exception("Error: El nombre del item es obligatorio.");
         }
+        
+        Tipo tipoFisico = this.tiposRegistrados.get(nombreTipo.toLowerCase());
         if (tipoFisico == null) {
-            throw new Exception("Error: El item debe tener un tipo fisico asignado.");
+            throw new Exception("Error: El tipo físico no existe");
         }
+        
         Item nuevo = new Item(nombre, descripcion, tipoFisico);        
-        if (categorias != null) {
-            int totalCategorias = categorias.size();
-            for (int j = 0; j < totalCategorias; j = j + 1) {
-                nuevo.agregarCategoria(categorias.get(j));
+        if (nombresCategorias != null) {
+            for (int j = 0; j < nombresCategorias.size(); j++) {
+                Categoria cat = consultarCategoria(nombresCategorias.get(j));
+                nuevo.agregarCategoria(cat);
             }
         }        
         this.itemsRegistrados.put(nuevo.getCodigo(), nuevo);        
@@ -228,14 +279,17 @@ public class Controladora implements java.io.Serializable {
         nuevo.vincularConCategorias();
     }
 
-    public void modificarItem(int codigo, String nombre, String descripcion, Tipo tipoNuevo, List<Categoria> categoriasNuevas) throws Exception {
+    public void modificarItem(int codigo, String nombre, String descripcion, String nombreTipoNuevo, List<String> nombresCategoriasNuevas) throws Exception {
         Item encontrado = consultarItem(codigo);
-        if (nombre == null || nombre.trim().isEmpty() == true) {
-            throw new Exception("Error: El nombre no puede estar vacío.");
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new Exception("Error: El nombre no puede estar vacío");
         }
+        
+        Tipo tipoNuevo = this.tiposRegistrados.get(nombreTipoNuevo.toLowerCase());
         if (tipoNuevo == null) {
-            throw new Exception("Error: El item no puede quedarse sin tipo físico.");
+            throw new Exception("Error: El tipo físico especificado no existe");
         }        
+        
         encontrado.desvincularDeTipo();
         encontrado.desvincularDeCategorias();            
         
@@ -243,10 +297,11 @@ public class Controladora implements java.io.Serializable {
         encontrado.setDescripcion(descripcion);
         encontrado.setTipoFisico(tipoNuevo);            
         encontrado.getCategorias().clear();
-        if (categoriasNuevas != null) { 
-            int totalNuevas = categoriasNuevas.size();
-            for (int k = 0; k < totalNuevas; k = k + 1) {
-                encontrado.agregarCategoria(categoriasNuevas.get(k));
+        
+        if (nombresCategoriasNuevas != null) { 
+            for (int k = 0; k < nombresCategoriasNuevas.size(); k++) {
+                Categoria cat = consultarCategoria(nombresCategoriasNuevas.get(k));
+                encontrado.agregarCategoria(cat);
             }
         }
         encontrado.vincularConTipoFisico();
@@ -380,8 +435,9 @@ public class Controladora implements java.io.Serializable {
     // MÉTODOS DE REPORTES
 
     public List<Persona> generarReporteUsuario() {
-        ArrayList<Persona> listaUsuarios = new ArrayList<>(this.personasRegistradas.values());
-        return listaUsuarios;
+        ArrayList<Persona> lista = new ArrayList<>(this.personasRegistradas.values());
+        this.ordenarUsuariosPorNombre(lista);
+        return lista;
     }
 
     public List<Item> generarReporteItem() {
@@ -391,13 +447,15 @@ public class Controladora implements java.io.Serializable {
     }
 
     public List<Categoria> generarReporteCategoria() {
-        ArrayList<Categoria> listaCategorias = new ArrayList<>(this.categoriasRegistradas.values());
-        return listaCategorias;
+        ArrayList<Categoria> lista = new ArrayList<>(this.categoriasRegistradas.values());
+        this.ordenarCategoriasPorNombre(lista);
+        return lista;
     }
 
     public List<Tipo> generarReporteTipo() {
-        ArrayList<Tipo> listaTipos = new ArrayList<>(this.tiposRegistrados.values());
-        return listaTipos;
+        ArrayList<Tipo> lista = new ArrayList<>(this.tiposRegistrados.values());
+        this.ordenarTiposPorNombre(lista);
+        return lista;
     }
 
     // EXTRAS
@@ -406,7 +464,7 @@ public class Controladora implements java.io.Serializable {
         return this.tiposRegistrados.get("generico");
     }
     
-    private void ordenarItemsPorNombre(List<Item> lista) {
+    public void ordenarItemsPorNombre(List<Item> lista) {
         int total = lista.size();
         for (int i = 0; i < total; i = i + 1) {
             for (int j = i + 1; j < total; j = j + 1) {
@@ -421,17 +479,85 @@ public class Controladora implements java.io.Serializable {
         }
     }
     
+
+    private void ordenarUsuariosPorNombre(List<Persona> lista) {
+        int total = lista.size();
+        for (int i = 0; i < total; i++) {
+            for (int j = i + 1; j < total; j++) {
+                if (lista.get(i).getNombreCompleto().compareToIgnoreCase(lista.get(j).getNombreCompleto()) > 0) {
+                    Persona temporal = lista.get(i);
+                    lista.set(i, lista.get(j));
+                    lista.set(j, temporal);
+                }
+            }
+        }
+    }
+
+    private void ordenarCategoriasPorNombre(List<Categoria> lista) {
+        int total = lista.size();
+        for (int i = 0; i < total; i++) {
+            for (int j = i + 1; j < total; j++) {
+                if (lista.get(i).getNombre().compareToIgnoreCase(lista.get(j).getNombre()) > 0) {
+                    Categoria temporal = lista.get(i);
+                    lista.set(i, lista.get(j));
+                    lista.set(j, temporal);
+                }
+            }
+        }
+    }
+
+    private void ordenarTiposPorNombre(List<Tipo> lista) {
+        int total = lista.size();
+        for (int i = 0; i < total; i++) {
+            for (int j = i + 1; j < total; j++) {
+                if (lista.get(i).getNombre().compareToIgnoreCase(lista.get(j).getNombre()) > 0) {
+                    Tipo temporal = lista.get(i);
+                    lista.set(i, lista.get(j));
+                    lista.set(j, temporal);
+                }
+            }
+        }
+    }
+    
+    // G y S
+    
+    public List<Prestamo> getPrestamosRegistrados() {
+        return this.prestamosRegistrados;
+    }
+
+    public Map<String, Persona> getPersonasRegistradas() {
+        return this.personasRegistradas;
+    }
+    
+    public Map<Integer, Item> getItemsRegistrados() {
+        return this.itemsRegistrados;
+    }
+    
+    public Map<String, Categoria> getCategoriasRegistradas() {
+        return this.categoriasRegistradas;
+    }
+
+    public Map<String, Tipo> getTiposRegistrados() {
+        return this.tiposRegistrados;
+    }
+
+    public Item consultarItem1(int codigo) throws Exception {
+        if (!itemsRegistrados.containsKey(codigo)) {
+            throw new Exception("El ítem no existe.");
+        }
+        return itemsRegistrados.get(codigo);
+    }
+    
     // PERSISTENCIA DE DATOS
 
     public void guardarDatos() {
         try {
             java.io.FileOutputStream file = new java.io.FileOutputStream("DatosPrestamos.dat");
-            java.io.ObjectOutputStream stream = new java.io.ObjectOutputStream(file);
-            stream.writeObject(instance);             
+            java.io.ObjectOutputStream stream = new java.io.ObjectOutputStream(file);                    
+            stream.writeObject(instance);         
             stream.close();
             file.close();
             System.out.println("Datos del sistema guardados con éxito");
-            
         } catch (java.io.IOException e) {
             System.out.println("Error al guardar los datos: " + e.getMessage());
         }
@@ -441,14 +567,130 @@ public class Controladora implements java.io.Serializable {
         try {
             java.io.FileInputStream file = new java.io.FileInputStream("DatosPrestamos.dat");
             java.io.ObjectInputStream stream = new java.io.ObjectInputStream(file);            
-            instance = (Controladora) stream.readObject();             
+            instance = (Controladora) stream.readObject(); 
             stream.close();
             file.close();
-            System.out.println("Datos del sistema cargados con éxito");           
+            System.out.println("Datos del sistema cargados con éxito.");           
         } catch (java.io.FileNotFoundException e) {
-            System.out.println("Archivo de datos no encontrado");
+            System.out.println("Archivo de datos no encontrado. Generando entorno de pruebas...");
+            generarDatosDePrueba();
         } catch (Exception e) {
             System.out.println("Error al cargar los datos: " + e.getMessage());
         }
+    }
+
+    private void generarDatosDePrueba() {
+        Persona p1 = new Persona("Luisa Meza", "8808-1711", "l.meza1@estudiantec.cr");
+        Persona p2 = new Persona("Marcos Aguilar", "6888-2522", "m.aguilar2@estudiantec.cr");
+        Persona p3 = new Persona("Geovanni González", "8788-2992", "geovanni.gonzalez@estudiantec.cr");
+        Persona p4 = new Persona("Neyshell Blear", "7821-9101", "neyshell.blear@estudiantec.cr");
+        Persona p5 = new Persona("Andrea Berlanga", "7011-9988", "andrea.b@estudiantec.cr");
+        
+        this.personasRegistradas.put(p1.getNombreCompleto(), p1);
+        this.personasRegistradas.put(p2.getNombreCompleto(), p2);
+        this.personasRegistradas.put(p3.getNombreCompleto(), p3);
+        this.personasRegistradas.put(p4.getNombreCompleto(), p4);
+        this.personasRegistradas.put(p5.getNombreCompleto(), p5);
+
+        Categoria catFantasia = new Categoria("Fantasía");
+        Categoria catEstrategia = new Categoria("Estrategia");
+        Categoria catElectronicos = new Categoria("Electrónicos");
+        Categoria catLiteratura = new Categoria("Literatura Clásica");
+        Categoria catArte = new Categoria("Arte y Diseño");
+        
+        this.categoriasRegistradas.put("Fantasía", catFantasia);
+        this.categoriasRegistradas.put("Estrategia", catEstrategia);
+        this.categoriasRegistradas.put("Electrónicos", catElectronicos);
+        this.categoriasRegistradas.put("Literatura Clásica", catLiteratura);
+        this.categoriasRegistradas.put("Arte y Diseño", catArte);
+
+        Tipo tipoLibro = new Tipo("Libro");
+        Tipo tipoJuego = new Tipo("Juego de Mesa");
+        Tipo tipoConsola = new Tipo("Consola de Videojuegos");
+        Tipo tipoRevista = new Tipo("Revista Científica");
+        Tipo tipoAccesorio = new Tipo("Accesorio Tecnológico");
+        
+        this.tiposRegistrados.put("Libro", tipoLibro);
+        this.tiposRegistrados.put("Juego de Mesa", tipoJuego);
+        this.tiposRegistrados.put("Consola de Videojuegos", tipoConsola);
+        this.tiposRegistrados.put("Revista Científica", tipoRevista);
+        this.tiposRegistrados.put("Accesorio Tecnológico", tipoAccesorio);
+
+        Item item1 = new Item("Harry Potter y la Piedra Filosofal", "Edición ilustrada MinaLima", tipoLibro);
+        item1.getCategorias().add(catFantasia);
+        catFantasia.agregarItem(item1);
+        item1.vincularConTipoFisico(); 
+        this.itemsRegistrados.put(item1.getCodigo(), item1);
+
+        Item item2 = new Item("Catan", "Juego base de tablero y comercio", tipoJuego);
+        item2.getCategorias().add(catEstrategia);
+        catEstrategia.agregarItem(item2);
+        item2.vincularConTipoFisico();
+        this.itemsRegistrados.put(item2.getCodigo(), item2);
+
+        Item item3 = new Item("Nintendo Switch", "Consola portátil color neón", tipoConsola);
+        item3.getCategorias().add(catElectronicos);
+        catElectronicos.agregarItem(item3);
+        item3.vincularConTipoFisico();
+        this.itemsRegistrados.put(item3.getCodigo(), item3);
+
+        Item item4 = new Item("Don Quijote de la Mancha", "Edición conmemorativa de la RAE", tipoLibro);
+        item4.getCategorias().add(catLiteratura);
+        catLiteratura.agregarItem(item4);
+        item4.vincularConTipoFisico();
+        this.itemsRegistrados.put(item4.getCodigo(), item4);
+
+        Item item5 = new Item("Tableta Digitalizadora Wacom", "Modelo Intuos Pro para ilustración", tipoAccesorio);
+        item5.getCategorias().add(catArte);
+        catArte.agregarItem(item5);
+        item5.vincularConTipoFisico();
+        this.itemsRegistrados.put(item5.getCodigo(), item5);
+
+        // Préstamo 1: Luisa tiene Harry Potter
+        Alerta alerta1 = new Alerta("Única", LocalDateTime.now().plusMinutes(10), "Revisar si terminó de leer.", 0);
+        List<Item> listaItems1 = new ArrayList<Item>();
+        listaItems1.add(item1);
+        Prestamo prestamo1 = new Prestamo(p1, listaItems1, alerta1);
+        item1.vincularAPrestamo(prestamo1); 
+        p1.asociarPrestamo(prestamo1);       
+        this.prestamosRegistrados.add(prestamo1);
+
+        // Préstamo 2: Marcos tiene Catan
+        Alerta alerta2 = new Alerta("Recurrente", LocalDateTime.now().plusMinutes(30), "Verificar devolución en el grupo.", 30);
+        List<Item> listaItems2 = new ArrayList<Item>();
+        listaItems2.add(item2);
+        Prestamo prestamo2 = new Prestamo(p2, listaItems2, alerta2);
+        item2.vincularAPrestamo(prestamo2);
+        p2.asociarPrestamo(prestamo2);
+        this.prestamosRegistrados.add(prestamo2);
+
+        // Préstamo 3: Geovanni tiene la Nintendo Switch
+        Alerta alerta3 = new Alerta("Única", LocalDateTime.now().plusDays(2), "Confirmar estado de la batería al recibir.", 0);
+        List<Item> listaItems3 = new ArrayList<Item>();
+        listaItems3.add(item3);
+        Prestamo prestamo3 = new Prestamo(p3, listaItems3, alerta3);
+        item3.vincularAPrestamo(prestamo3);
+        p3.asociarPrestamo(prestamo3);
+        this.prestamosRegistrados.add(prestamo3);
+
+        // Préstamo 4: Neyshell tiene Don Quijote
+        Alerta alerta4 = new Alerta("Recurrente", LocalDateTime.now().plusDays(7), "Revisar avance de la lectura obligatoria.", 60);
+        List<Item> listaItems4 = new ArrayList<Item>();
+        listaItems4.add(item4);
+        Prestamo prestamo4 = new Prestamo(p4, listaItems4, alerta4);
+        item4.vincularAPrestamo(prestamo4);
+        p4.asociarPrestamo(prestamo4);
+        this.prestamosRegistrados.add(prestamo4);
+
+        // Préstamo 5: Andrea tiene la tableta Wacom
+        Alerta alerta5 = new Alerta("Única", LocalDateTime.now().plusHours(5), "Validar entrega del lápiz digital óptico.", 0);
+        List<Item> listaItems5 = new ArrayList<Item>();
+        listaItems5.add(item5);
+        Prestamo prestamo5 = new Prestamo(p5, listaItems5, alerta5);
+        item5.vincularAPrestamo(prestamo5);
+        p5.asociarPrestamo(prestamo5);
+        this.prestamosRegistrados.add(prestamo5);
+
+        guardarDatos();
     }
 }
